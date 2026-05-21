@@ -185,25 +185,29 @@ def download_drive_file(service, file_id):
 
 
 def upload_attachment(record_id, filename, file_bytes):
-    attachment_field = quote(ATTACHMENT_FIELD, safe="")
+    max_upload_size = 5 * 1024 * 1024
+
+    if len(file_bytes) > max_upload_size:
+        raise Exception(
+            f"Attachment is {len(file_bytes)} bytes, but Airtable direct uploads are limited to 5 MB."
+        )
 
     url = (
-        f"https://content.airtable.com/v0/"
-        f"{AIRTABLE_BASE_ID}/{record_id}/{attachment_field}/uploadAttachment"
+        f"https://content.airtable.com/v0/{AIRTABLE_BASE_ID}/{record_id}/"
+        f"{quote(ATTACHMENT_FIELD, safe='')}/uploadAttachment"
     )
 
     payload = {
         "contentType": "text/plain",
         "filename": filename,
-        "file": base64.b64encode(file_bytes).decode("utf-8"),
+        "file": base64.b64encode(file_bytes).decode("ascii"),
     }
 
-    print("Uploading attachment...")
+    print("Uploading attachment with Airtable REST API...")
     print("Record ID:", record_id)
     print("Attachment field:", ATTACHMENT_FIELD)
     print("Filename:", filename)
     print("File size:", len(file_bytes))
-    print("Upload URL:", url)
 
     response = airtable_request("POST", url, json=payload)
     return response.json()

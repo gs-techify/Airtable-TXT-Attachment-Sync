@@ -1,0 +1,546 @@
+{
+  "name": "Airtable TXT Attachment Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Airtable TXT Attachment Sync\\n\\nThis workflow reads Airtable site records, finds matching .txt files in a Google Drive folder, uploads them into an Airtable attachment field, and writes sync metadata back to Airtable.\\n\\nConfigure environment variables and credentials before running.",
+        "height": 220,
+        "width": 420
+      },
+      "id": "cdf2999e-3ada-43e6-9d0c-6f8dd8e25958",
+      "name": "Workflow Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        -260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9dd269ac-7a4c-4f1d-be9f-b68a6b6421e3",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "f3387d2e-3caf-4e89-bb50-921de3a0326f",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const runId = `run_${Date.now()}`;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    runId,\n    startedAt: now,\n    config: {\n      airtableBaseId: $env.AIRTABLE_BASE_ID,\n      airtableTableName: $env.AIRTABLE_TABLE_NAME || 'Sites',\n      domainField: $env.AIRTABLE_DOMAIN_FIELD || 'Domain',\n      filenameField: $env.AIRTABLE_FILENAME_FIELD || 'TXT Filename',\n      attachmentFieldId: $env.AIRTABLE_ATTACHMENT_FIELD_ID,\n      driveIdField: $env.AIRTABLE_DRIVE_ID_FIELD || 'Drive File ID',\n      md5Field: $env.AIRTABLE_MD5_FIELD || 'Drive MD5',\n      modifiedField: $env.AIRTABLE_MODIFIED_FIELD || 'Drive Modified Time',\n      sizeField: $env.AIRTABLE_SIZE_FIELD || 'Drive File Size',\n      statusField: $env.AIRTABLE_STATUS_FIELD || 'Last Sync Status',\n      errorField: $env.AIRTABLE_ERROR_FIELD || 'Last Sync Error',\n      syncedAtField: $env.AIRTABLE_SYNCED_AT_FIELD || 'Last Sync At',\n      runIdField: $env.AIRTABLE_RUN_ID_FIELD || 'Last Sync Run ID',\n      googleDriveFolderId: $env.GOOGLE_DRIVE_FOLDER_ID\n    }\n  }\n}];"
+      },
+      "id": "1dcbc278-c3fa-4a1b-9dcb-51fcaa1df70e",
+      "name": "Create Run Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "={{$env.AIRTABLE_TABLE_NAME || 'Sites'}}",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "90990bc6-39b6-4431-a4c9-330ab1981153",
+      "name": "Read Airtable Records",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        150
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "REPLACE_WITH_N8N_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const records = $input.all().map(item => item.json);\n\nreturn [{\n  json: {\n    records,\n    count: records.length\n  }\n}];"
+      },
+      "id": "30c5116c-7822-4c97-97bb-dbf0244a539d",
+      "name": "Collect Airtable Records",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{`'${$env.GOOGLE_DRIVE_FOLDER_ID}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`}}",
+        "returnAll": true,
+        "filter": {},
+        "options": {
+          "fields": [
+            "id",
+            "name",
+            "mimeType",
+            "modifiedTime",
+            "md5Checksum",
+            "size"
+          ]
+        }
+      },
+      "id": "9c713658-e435-42ee-bb07-b5551075de4f",
+      "name": "List Google Drive Files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        260,
+        150
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_WITH_N8N_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const airtableRecords = $items('Collect Airtable Records')[0].json.records || [];\nconst driveItems = $input.all().map(item => item.json);\n\nconst runId = `run_${Date.now()}`;\nconst now = new Date().toISOString();\n\nconst config = {\n  domainField: $env.AIRTABLE_DOMAIN_FIELD || 'Domain',\n  filenameField: $env.AIRTABLE_FILENAME_FIELD || 'TXT Filename',\n  attachmentFieldId: $env.AIRTABLE_ATTACHMENT_FIELD_ID,\n  driveIdField: $env.AIRTABLE_DRIVE_ID_FIELD || 'Drive File ID',\n  md5Field: $env.AIRTABLE_MD5_FIELD || 'Drive MD5',\n  modifiedField: $env.AIRTABLE_MODIFIED_FIELD || 'Drive Modified Time',\n  sizeField: $env.AIRTABLE_SIZE_FIELD || 'Drive File Size',\n  statusField: $env.AIRTABLE_STATUS_FIELD || 'Last Sync Status',\n  errorField: $env.AIRTABLE_ERROR_FIELD || 'Last Sync Error',\n  syncedAtField: $env.AIRTABLE_SYNCED_AT_FIELD || 'Last Sync At',\n  runIdField: $env.AIRTABLE_RUN_ID_FIELD || 'Last Sync Run ID'\n};\n\nconst driveIndex = {};\n\nfor (const file of driveItems) {\n  const name = file.name;\n  if (!name || !name.toLowerCase().endsWith('.txt')) continue;\n  if (!driveIndex[name]) driveIndex[name] = [];\n  driveIndex[name].push(file);\n}\n\nconst output = [];\n\nfor (const record of airtableRecords) {\n  const fields = record.fields || record;\n  const recordId = record.id || record.recordId;\n\n  const domain = fields[config.domainField];\n  const filename = fields[config.filenameField];\n\n  const baseItem = {\n    runId,\n    checkedAt: now,\n    recordId,\n    domain,\n    filename,\n    config\n  };\n\n  if (!recordId || !domain || !filename) {\n    output.push({\n      json: {\n        ...baseItem,\n        action: 'failed',\n        error: 'Missing record ID, Domain, or TXT Filename'\n      }\n    });\n    continue;\n  }\n\n  const matches = driveIndex[filename] || [];\n\n  if (matches.length === 0) {\n    output.push({\n      json: {\n        ...baseItem,\n        action: 'failed',\n        error: `Drive file not found: ${filename}`\n      }\n    });\n    continue;\n  }\n\n  if (matches.length > 1) {\n    output.push({\n      json: {\n        ...baseItem,\n        action: 'failed',\n        error: `Duplicate Drive files found for ${filename}. Drive IDs: ${matches.map(f => f.id).join(', ')}`\n      }\n    });\n    continue;\n  }\n\n  const driveFile = matches[0];\n  const attachment = fields[$env.AIRTABLE_ATTACHMENT_FIELD_NAME || 'TXT Attachment'];\n  const storedDriveId = fields[config.driveIdField];\n  const storedMd5 = fields[config.md5Field];\n  const storedModified = fields[config.modifiedField];\n\n  const alreadySynced =\n    attachment &&\n    storedDriveId === driveFile.id &&\n    (!driveFile.md5Checksum || storedMd5 === driveFile.md5Checksum) &&\n    storedModified === driveFile.modifiedTime;\n\n  if (alreadySynced) {\n    output.push({\n      json: {\n        ...baseItem,\n        action: 'skipped',\n        driveFile\n      }\n    });\n    continue;\n  }\n\n  output.push({\n    json: {\n      ...baseItem,\n      action: 'upload',\n      driveFile\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "d21d4b60-754c-4ab3-a2c5-882160a2467f",
+      "name": "Match Records to Drive Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.action}}",
+                    "rightValue": "upload",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "upload"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.action}}",
+                    "rightValue": "failed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "failed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.action}}",
+                    "rightValue": "skipped",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "skipped"
+            }
+          ]
+        }
+      },
+      "id": "79ac1828-58ef-470e-92a9-b67d0f21d3b4",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        780,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{$json.driveFile.id}}",
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "c0717784-66bb-4d9f-bb46-505f1003625a",
+      "name": "Download Drive TXT File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        -30
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_WITH_N8N_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://content.airtable.com/v0/{{$env.AIRTABLE_BASE_ID}}/{{$json.recordId}}/{{$env.AIRTABLE_ATTACHMENT_FIELD_ID}}/uploadAttachment",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.AIRTABLE_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contentType\": \"text/plain\",\n  \"filename\": $json.filename,\n  \"file\": $binary.data.data\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "291355a8-d181-47eb-83bd-230ac2b3138f",
+      "name": "Upload Attachment to Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -30
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/{{$env.AIRTABLE_BASE_ID}}/{{$env.AIRTABLE_TABLE_NAME || 'Sites'}}/{{$json.recordId}}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.AIRTABLE_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    [$json.config.driveIdField]: $json.driveFile.id,\n    [$json.config.md5Field]: $json.driveFile.md5Checksum || '',\n    [$json.config.modifiedField]: $json.driveFile.modifiedTime || '',\n    [$json.config.sizeField]: Number($json.driveFile.size || 0),\n    [$json.config.statusField]: 'Synced',\n    [$json.config.errorField]: '',\n    [$json.config.syncedAtField]: new Date().toISOString(),\n    [$json.config.runIdField]: $json.runId\n  },\n  \"typecast\": true\n}"
+      },
+      "id": "7636281c-675c-447e-9192-e7126ef8d4a9",
+      "name": "Update Airtable Synced Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -30
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/{{$env.AIRTABLE_BASE_ID}}/{{$env.AIRTABLE_TABLE_NAME || 'Sites'}}/{{$json.recordId}}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.AIRTABLE_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    [$json.config.statusField]: 'Failed',\n    [$json.config.errorField]: $json.error,\n    [$json.config.syncedAtField]: new Date().toISOString(),\n    [$json.config.runIdField]: $json.runId\n  },\n  \"typecast\": true\n}"
+      },
+      "id": "e58da1d9-6669-425e-bcdb-e43be5312f3e",
+      "name": "Update Airtable Failed Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/{{$env.AIRTABLE_BASE_ID}}/{{$env.AIRTABLE_TABLE_NAME || 'Sites'}}/{{$json.recordId}}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.AIRTABLE_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n    [$json.config.statusField]: 'Skipped',\n    [$json.config.errorField]: '',\n    [$json.config.syncedAtField]: new Date().toISOString(),\n    [$json.config.runIdField]: $json.runId\n  },\n  \"typecast\": true\n}"
+      },
+      "id": "cb87d6cd-b498-428a-8a39-34eb5adae86e",
+      "name": "Update Airtable Skipped Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Setup requirements\\n\\nRequired env vars:\\n- AIRTABLE_TOKEN\\n- AIRTABLE_BASE_ID\\n- AIRTABLE_TABLE_NAME\\n- AIRTABLE_ATTACHMENT_FIELD_ID\\n- GOOGLE_DRIVE_FOLDER_ID\\n\\nUse the Airtable attachment field ID beginning with `fld`, not only the visible field name.",
+        "height": 260,
+        "width": 460
+      },
+      "id": "4b7410aa-a588-40f3-8fdf-9fd73888240a",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -360
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Run Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Run Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Run Config": {
+      "main": [
+        [
+          {
+            "node": "Read Airtable Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Airtable Records": {
+      "main": [
+        [
+          {
+            "node": "Collect Airtable Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Airtable Records": {
+      "main": [
+        [
+          {
+            "node": "List Google Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Google Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Match Records to Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Records to Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Download Drive TXT File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Airtable Failed Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Airtable Skipped Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Drive TXT File": {
+      "main": [
+        [
+          {
+            "node": "Upload Attachment to Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Attachment to Airtable": {
+      "main": [
+        [
+          {
+            "node": "Update Airtable Synced Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Airtable TXT attachment sync workflow for manual and scheduled runs. Configure credentials and environment variables before use."
+  },
+  "tags": [
+    {
+      "name": "airtable"
+    },
+    {
+      "name": "google-drive"
+    },
+    {
+      "name": "txt-sync"
+    }
+  ]
+}

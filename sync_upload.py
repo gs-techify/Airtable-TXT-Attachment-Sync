@@ -186,10 +186,15 @@ def download_drive_file(service, file_id):
 
 def upload_attachment(record_id, filename, file_bytes):
     max_upload_size = 5 * 1024 * 1024
+    original_size = len(file_bytes)
 
-    if len(file_bytes) > max_upload_size:
+    if original_size == 0:
+        print("Drive file is empty; uploading a newline placeholder because Airtable rejects 0-byte attachments.")
+        file_bytes = b"\n"
+
+    if original_size > max_upload_size:
         raise Exception(
-            f"Attachment is {len(file_bytes)} bytes, but Airtable direct uploads are limited to 5 MB."
+            f"Attachment is {original_size} bytes, but Airtable direct uploads are limited to 5 MB."
         )
 
     url = (
@@ -207,7 +212,8 @@ def upload_attachment(record_id, filename, file_bytes):
     print("Record ID:", record_id)
     print("Attachment field:", ATTACHMENT_FIELD)
     print("Filename:", filename)
-    print("File size:", len(file_bytes))
+    print("Drive file size:", original_size)
+    print("Uploaded byte size:", len(file_bytes))
 
     response = airtable_request("POST", url, json=payload)
     return response.json()

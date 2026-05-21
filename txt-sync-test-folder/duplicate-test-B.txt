@@ -1,0 +1,6 @@
+Domain: duplicate-test.com
+Version: B
+Purpose: This is the second duplicate test file.
+
+Expected result:
+The automation should fail safely because two files have the same filename in Google Drive.

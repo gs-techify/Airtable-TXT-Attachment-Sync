@@ -1,0 +1,12 @@
+Domain: 1bettor.com
+File Type: TXT Sync Test File
+Version: 1.0
+Purpose: This file is used to test a normal successful upload from Google Drive to the Airtable attachment field.
+
+This is a sample TXT file for 1bettor.com.
+The automation should find this file by its filename and attach it to the Airtable record where Domain is example.com.
+
+Expected result:
+Last Sync Status should become Synced.
+TXT Attachment should contain this file.
+Drive File ID, Drive MD5, Drive Modified Time, and Last Sync At should be updated.

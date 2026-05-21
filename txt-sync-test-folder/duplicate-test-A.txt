@@ -1,0 +1,6 @@
+Domain: duplicate-test.com
+Version: A
+Purpose: This is the first duplicate test file.
+
+Expected result:
+The automation should detect more than one Drive file with the same final filename and should not upload either file.

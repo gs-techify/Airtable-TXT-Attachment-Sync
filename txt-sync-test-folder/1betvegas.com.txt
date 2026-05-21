@@ -1,0 +1,12 @@
+Domain: 1betvegas.com
+File Type: TXT Sync Test File
+Version: 1.0
+Purpose: This file is used as a second successful upload test case.
+
+This is a sample TXT file for 1betvegas.com.
+The automation should match this file using the TXT Filename field in Airtable.
+
+Expected result:
+The file should upload successfully to the TXT Attachment field.
+The script should mark the Airtable record as Synced.
+If the script is run again without changes, it should skip this record safely.

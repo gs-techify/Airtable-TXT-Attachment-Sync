@@ -1,0 +1,12 @@
+Domain: betnet.ag
+File Type: Duplicate Filename Test
+Version: 1.0
+Purpose: This file is used to test duplicate filename handling.
+
+This file has the same filename as another file in the Google Drive folder.
+The automation should detect that more than one file exists with the filename betnet.txt.
+
+Expected result:
+The script should NOT upload either file.
+The Airtable record should be marked as Failed.
+Last Sync Error should say something like: Duplicate Drive files found for betnet.txt.

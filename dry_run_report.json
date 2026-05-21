@@ -1,0 +1,66 @@
+{
+  "total_records": 7,
+  "success_ready": [
+    {
+      "record_id": "recRcqVAAdlx8XKZo",
+      "domain": "betwar.com",
+      "filename": "betwar.com.txt",
+      "drive_file_id": "1o3qu74w3OocECgzYbu7gMZZDJ3Er2mVF",
+      "drive_modified_time": "2026-05-21T00:00:35.000Z",
+      "drive_file_size": "0",
+      "drive_md5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "record_id": "recWbbmGjyIm3moAz",
+      "domain": "1bettor.com",
+      "filename": "1bettor.com.txt",
+      "drive_file_id": "1uHbkxqMn2ghoYMCuggQspRnFOprGpIws",
+      "drive_modified_time": "2026-05-21T00:00:25.000Z",
+      "drive_file_size": "0",
+      "drive_md5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "record_id": "receTg7ap0qAlvUer",
+      "domain": "2bet888.com",
+      "filename": "2bet888.com.txt",
+      "drive_file_id": "1bA1gaSjW-5waXRAlUkw-rSg6CF33PSt9",
+      "drive_modified_time": "2026-05-21T00:00:35.000Z",
+      "drive_file_size": "0",
+      "drive_md5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "record_id": "recoAWGXJj7JzsICA",
+      "domain": "1betvegas.com",
+      "filename": "1betvegas.com.txt",
+      "drive_file_id": "12PbzMA44Le-YwV3s8r6u1-cfugTNDlOY",
+      "drive_modified_time": "2026-05-21T00:00:35.000Z",
+      "drive_file_size": "0",
+      "drive_md5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "record_id": "reczplwzkGIk2X6ph",
+      "domain": "betnet.ag",
+      "filename": "betnet.ag.txt",
+      "drive_file_id": "1Ci_zTd2JrA6-9MjoBPSSnNk6gtoMifr5",
+      "drive_modified_time": "2026-05-21T00:00:35.000Z",
+      "drive_file_size": "0",
+      "drive_md5": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+  ],
+  "missing_files": [
+    {
+      "record_id": "recXqzlqrGARGQacS",
+      "domain": "missing-test.com",
+      "filename": "missing-test.com.txt",
+      "error": "Drive file not found"
+    },
+    {
+      "record_id": "reciI1LgCs1JUGeqf",
+      "domain": "duplicate-test.com",
+      "filename": "duplicate-test.com",
+      "error": "Drive file not found"
+    }
+  ],
+  "duplicate_files": [],
+  "invalid_records": []
+}
